@@ -183,12 +183,6 @@ public class TrollyProvider extends ContentProvider {
             values.put(ShoppingList.STATUS, Trolly.ShoppingList.ON_LIST);
         }
         
-        
-//        if (values.containsKey(ShoppingList.LISTNAME) == false) {
-//            values.put(ShoppingList.LISTNAME, 2);
-//        }
-
-
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
         long rowId = db.insert(TABLE_NAME, ShoppingList.ITEM, values);

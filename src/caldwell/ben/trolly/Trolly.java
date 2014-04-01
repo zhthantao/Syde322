@@ -234,7 +234,7 @@ public class Trolly extends ListActivity {
 			super(context, c);
 			mContent = context.getContentResolver();
 		}
- 
+
 		@Override
 		public void bindView(View view, Context context, Cursor cursor) {
 			((TextView) view).setText(cursor.getString(cursor
@@ -284,9 +284,12 @@ public class Trolly extends ListActivity {
 	private static final String[] PROJECTION = new String[] { ShoppingList._ID, // 0
 			ShoppingList.ITEM, // 1
 			ShoppingList.STATUS, // 2
-			// ShoppingList.MODIFIED_DATE,
 			ShoppingList.LISTNAME, // 3 print list name
 	};
+
+	/**
+	 * The columns we are interested when we call the lists interface
+	 */
 
 	private static final String[] LISTPROJECTION = new String[] {
 			ShoppingList._ID, // 0
@@ -328,9 +331,6 @@ public class Trolly extends ListActivity {
 	private Button btnAdd;
 	private TrollyAdapter mAdapter;
 	private TrollyAdapterForList mAdapterForList;
-	private boolean flag = true;
-
-	private TrollyAdapter currentAdapter;
 
 	private SharedPreferences mPrefs;
 
@@ -347,7 +347,7 @@ public class Trolly extends ListActivity {
 		if (intent.getData() == null) {
 			intent.setData(currentURI);
 		}
- 
+
 		setContentView(R.layout.trolly);
 		// Inform the list we provide context menus for items
 		getListView().setOnCreateContextMenuListener(this);
@@ -374,15 +374,17 @@ public class Trolly extends ListActivity {
 			@Override
 			public void onClick(View view) {
 
+				if (!listMode) {
 					// If there is a string in the textbox then add it to the
 					// list
-				if (!listMode) {
+
 					if (mTextBox.getText().length() > 0) {
 						Cursor c = getContentResolver().query(
 								getIntent().getData(),
 								PROJECTION,
 								ShoppingList.ITEM + "='" + mTextBox.getText()
-										+ "'" + " AND listname='" + currentList+"'", // TODO
+										+ "'" + " AND listname='" + currentList
+										+ "'", 
 								null, null);
 						c.moveToFirst();
 						if (c == null
@@ -398,7 +400,8 @@ public class Trolly extends ListActivity {
 							ContentValues values = new ContentValues();
 							values.put(ShoppingList.STATUS,
 									ShoppingList.ON_LIST);
-							long id = c.getLong(c.getColumnIndex(ShoppingList._ID));
+							long id = c.getLong(c
+									.getColumnIndex(ShoppingList._ID));
 							Uri uri = ContentUris.withAppendedId(getIntent()
 									.getData(), id);
 							getContentResolver()
@@ -409,35 +412,34 @@ public class Trolly extends ListActivity {
 						adding = !adding;
 						updateList();
 					}
-				} 
-				// List mode to add new list Name 
+				}
+				// List mode to add new list Name
 				else {
-					//mTextBox.setText("Input new list name");
 					if (mTextBox.getText().length() > 0) {
-						Cursor c = getContentResolver().query(getIntent().getData(),PROJECTION,	ShoppingList.ITEM + "='" + mTextBox.getText()
-								+ "'" + " AND listname='" + currentList+"'", // TODO
-								null, null);
+						Cursor c = getContentResolver().query(
+								getIntent().getData(),
+								PROJECTION,
+								ShoppingList.ITEM + "='" + mTextBox.getText()
+										+ "'" + " AND listname='" + currentList
+										+ "'", 	null, null);
 						c.moveToFirst();
-						
+
 						ContentValues values = new ContentValues();
-						values.put(ShoppingList.ITEM,"");
-						values.put(ShoppingList.LISTNAME,	mTextBox.getText().toString());
-						getContentResolver().insert(currentURI, values);	
+						values.put(ShoppingList.ITEM, "");
+						values.put(ShoppingList.LISTNAME, mTextBox.getText()
+								.toString());
+						getContentResolver().insert(currentURI, values);
+						updateListView();
+					} else {
+						adding = !adding;
 						updateListView();
 					}
-					 else {
-							adding = !adding;
-							updateListView();
-						}
 					mTextBox.setText("");
 
 				}
 			}
-			
 
-			
 		});
-		// mPrefs = getSharedPreferences(null, MODE_PRIVATE);
 		mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
 		if (intent
@@ -445,25 +447,17 @@ public class Trolly extends ListActivity {
 			addExtraItems();
 	}
 
-	protected void updateList() { // TODO
+	protected void updateList() {
 		// set up the list cursor
 		mCursor = managedQuery(getIntent().getData(), PROJECTION, adding ? null
 				: ShoppingList.STATUS + "<>" + ShoppingList.OFF_LIST
-						+ " AND listname='" + currentList+"'" + " AND item !=''", null,
+						+ " AND listname='" + currentList + "'"
+						+ " AND item !=''", null,
 				ShoppingList.DEFAULT_SORT_ORDER);
-		// mCursor = managedQuery(getIntent().getData(), PROJECTION,"listname=2"
-		// ,null,ShoppingList.DEFAULT_SORT_ORDER);//TODO
 
 		// set the list adapter
 		mAdapter = new TrollyAdapter(this, R.layout.shoppinglist_item, mCursor,
 				new String[] { ShoppingList.ITEM }, new int[] { R.id.item });
-		
-//		if(listMode){
-//		mTextBox.setHint("Add a list");
-//		}else {
-//			mTextBox.setHint("Add an item");
-//
-//		}
 		setListAdapter(mAdapter);
 	}
 
@@ -490,43 +484,45 @@ public class Trolly extends ListActivity {
 
 	@Override
 	protected void onListItemClick(ListView l, View v, int position, long id) {
-		
+
 		if (!listMode) {
-		// super.onListItemClick(l, v, position, id);
-		Uri uri = ContentUris.withAppendedId(getIntent().getData(), id);
-		Cursor c = getContentResolver().query(uri, PROJECTION, null, null, null);
-		c.moveToFirst();
-		ContentValues values = new ContentValues();
-		switch (c.getInt(c.getColumnIndex(ShoppingList.STATUS))) {
-		case ShoppingList.OFF_LIST:
-			// move from off the list to on the list
-			values.put(ShoppingList.STATUS, ShoppingList.ON_LIST);
-			getContentResolver().update(uri, values, null, null);
-			break;
-		case ShoppingList.ON_LIST:
-			values.put(ShoppingList.STATUS, ShoppingList.IN_TROLLEY);
-			getContentResolver().update(uri, values, null, null);
-			break;
-		case ShoppingList.IN_TROLLEY:
-			// move back from in the trolley to on the list
-			values.put(ShoppingList.STATUS, ShoppingList.ON_LIST);
-			getContentResolver().update(uri, values, null, null);
-			break;
+			// super.onListItemClick(l, v, position, id);
+			Uri uri = ContentUris.withAppendedId(getIntent().getData(), id);
+			Cursor c = getContentResolver().query(uri, PROJECTION, null, null,
+					null);
+			c.moveToFirst();
+			ContentValues values = new ContentValues();
+			switch (c.getInt(c.getColumnIndex(ShoppingList.STATUS))) {
+			case ShoppingList.OFF_LIST:
+				// move from off the list to on the list
+				values.put(ShoppingList.STATUS, ShoppingList.ON_LIST);
+				getContentResolver().update(uri, values, null, null);
+				break;
+			case ShoppingList.ON_LIST:
+				values.put(ShoppingList.STATUS, ShoppingList.IN_TROLLEY);
+				getContentResolver().update(uri, values, null, null);
+				break;
+			case ShoppingList.IN_TROLLEY:
+				// move back from in the trolley to on the list
+				values.put(ShoppingList.STATUS, ShoppingList.ON_LIST);
+				getContentResolver().update(uri, values, null, null);
+				break;
+			}
+			if (adding) {
+				adding = false;
+				updateList();
+			}
 		}
-		if (adding) {
-			adding = false;
-			updateList();
-		}
-		}
-		// When the mode is list menu
+
+		// Handle the click when the mode is list menu
 
 		else {
 			Uri uri = ContentUris.withAppendedId(getIntent().getData(), id);
-			Cursor c = getContentResolver().query(uri, PROJECTION, null, null, null);
+			Cursor c = getContentResolver().query(uri, PROJECTION, null, null,
+					null);
 			c.moveToFirst();
-			
+
 			String list = c.getString(c.getColumnIndex(ShoppingList.LISTNAME));
-			//System.out.println("from onListItemClick list = " + list);
 			currentList = list;
 			updateList();
 			mTextBox.setHint("Add an item");
@@ -537,58 +533,7 @@ public class Trolly extends ListActivity {
 
 	@Override
 	public boolean onContextItemSelected(MenuItem item) {
-		if(!listMode){
-		AdapterView.AdapterContextMenuInfo info;
-		try {
-			info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
-		} catch (ClassCastException e) {
-			return false;
-		}
-
-		Cursor cursor = (Cursor) getListAdapter().getItem(info.position);
-		if (cursor == null) {
-			// For some reason the requested item isn't available, do nothing
-			return false;
-		}
-
-		mUri = ContentUris.withAppendedId(getIntent().getData(),
-				cursor.getLong(cursor.getColumnIndex(ShoppingList._ID)));
-		Cursor c = getContentResolver().query(mUri, PROJECTION, null, null,
-				null);
-		c.moveToFirst();
-		ContentValues values = new ContentValues();
-
-		switch (item.getItemId()) {
-		case MENU_ITEM_ON_LIST:
-			// Change to "on list" status
-			values.put(ShoppingList.STATUS, ShoppingList.ON_LIST);
-			getContentResolver().update(mUri, values, null, null);
-			return true;
-		case MENU_ITEM_OFF_LIST:
-			// Change to "off list" status
-			values.put(ShoppingList.STATUS, ShoppingList.OFF_LIST);
-			getContentResolver().update(mUri, values, null, null);
-			return true;
-		case MENU_ITEM_IN_TROLLEY:
-			// Change to "in trolley" status
-			values.put(ShoppingList.STATUS, ShoppingList.IN_TROLLEY);
-			getContentResolver().update(mUri, values, null, null);
-			return true;
-		case MENU_ITEM_EDIT:
-			// Show edit dialog
-			showDialog(DIALOG_EDIT);
-			mDialogEdit
-					.setText(c.getString(c.getColumnIndex(ShoppingList.ITEM)));
-			return true;
-		case MENU_ITEM_DELETE:
-			// Show are you sure dialog then delete
-			showDialog(DIALOG_DELETE);
-			mDialogText
-					.setText(c.getString(c.getColumnIndex(ShoppingList.ITEM)));
-			return true;
-		}
-		}else  // TODO change the list pop window 
-		{
+		if (!listMode) {
 			AdapterView.AdapterContextMenuInfo info;
 			try {
 				info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
@@ -598,7 +543,61 @@ public class Trolly extends ListActivity {
 
 			Cursor cursor = (Cursor) getListAdapter().getItem(info.position);
 			if (cursor == null) {
-				// For some reason the requested item isn't available, do nothing
+				// For some reason the requested item isn't available, do
+				// nothing
+				return false;
+			}
+
+			mUri = ContentUris.withAppendedId(getIntent().getData(),
+					cursor.getLong(cursor.getColumnIndex(ShoppingList._ID)));
+			Cursor c = getContentResolver().query(mUri, PROJECTION, null, null,
+					null);
+			c.moveToFirst();
+			ContentValues values = new ContentValues();
+
+			switch (item.getItemId()) {
+			case MENU_ITEM_ON_LIST:
+				// Change to "on list" status
+				values.put(ShoppingList.STATUS, ShoppingList.ON_LIST);
+				getContentResolver().update(mUri, values, null, null);
+				return true;
+			case MENU_ITEM_OFF_LIST:
+				// Change to "off list" status
+				values.put(ShoppingList.STATUS, ShoppingList.OFF_LIST);
+				getContentResolver().update(mUri, values, null, null);
+				return true;
+			case MENU_ITEM_IN_TROLLEY:
+				// Change to "in trolley" status
+				values.put(ShoppingList.STATUS, ShoppingList.IN_TROLLEY);
+				getContentResolver().update(mUri, values, null, null);
+				return true;
+			case MENU_ITEM_EDIT:
+				// Show edit dialog
+				showDialog(DIALOG_EDIT);
+				mDialogEdit.setText(c.getString(c
+						.getColumnIndex(ShoppingList.ITEM)));
+				return true;
+			case MENU_ITEM_DELETE:
+				// Show are you sure dialog then delete
+				showDialog(DIALOG_DELETE);
+				mDialogText.setText(c.getString(c
+						.getColumnIndex(ShoppingList.ITEM)));
+				return true;
+			}
+		}
+		// The list interface pop out window for handling delete
+		else {
+			AdapterView.AdapterContextMenuInfo info;
+			try {
+				info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+			} catch (ClassCastException e) {
+				return false;
+			}
+
+			Cursor cursor = (Cursor) getListAdapter().getItem(info.position);
+			if (cursor == null) {
+				// For some reason the requested item isn't available, do
+				// nothing
 				return false;
 			}
 
@@ -611,58 +610,23 @@ public class Trolly extends ListActivity {
 			switch (item.getItemId()) {
 			case MENU_ITEM_DELETE:
 				showDialog(DIALOG_DELETE);
-				currentList = c.getString(c.getColumnIndex(ShoppingList.LISTNAME));
-				mDialogText.setText(c.getString(c.getColumnIndex(ShoppingList.LISTNAME)));
-				
+				currentList = c.getString(c
+						.getColumnIndex(ShoppingList.LISTNAME));
+				mDialogText.setText(c.getString(c
+						.getColumnIndex(ShoppingList.LISTNAME)));
+
 				break;
-			}			
-			return true;
 			}
-		
+			return true;
+		}
+
 		return false;
 	}
 
 	@Override
 	public void onCreateContextMenu(ContextMenu menu, View v,
 			ContextMenuInfo menuInfo) {
-		if(!listMode){
-		AdapterView.AdapterContextMenuInfo info;
-		try {
-			info = (AdapterView.AdapterContextMenuInfo) menuInfo;
-		} catch (ClassCastException e) {
-			return;
-		}
-		Cursor cursor = (Cursor) getListAdapter().getItem(info.position);
-		if (cursor == null) {
-			// For some reason the requested item isn't available, do nothing
-			return;
-		}
-		// Setup the menu header
-		menu.setHeaderTitle(cursor.getString(cursor
-				.getColumnIndex(ShoppingList.ITEM)));
-		int status = cursor.getInt(cursor.getColumnIndex(ShoppingList.STATUS));
-
-		// Add context menu items depending on current state
-		switch (status) {
-		case ShoppingList.OFF_LIST:
-			menu.add(0, MENU_ITEM_ON_LIST, 0, R.string.move_on_list);
-			menu.add(0, MENU_ITEM_IN_TROLLEY, 0, R.string.move_in_trolley);
-			break;
-		case ShoppingList.ON_LIST:
-			menu.add(0, MENU_ITEM_IN_TROLLEY, 0, R.string.move_in_trolley);
-			menu.add(0, MENU_ITEM_OFF_LIST, 0, R.string.move_off_list);
-			break;
-		case ShoppingList.IN_TROLLEY:
-			menu.add(0, MENU_ITEM_ON_LIST, 0, R.string.move_on_list);
-			menu.add(0, MENU_ITEM_OFF_LIST, 0, R.string.move_off_list);
-			break;
-		}
-
-		// Add context menu items that are relevant for all items
-		menu.add(0, MENU_ITEM_EDIT, 0, R.string.edit_item);
-		menu.add(0, MENU_ITEM_DELETE, 0, R.string.delete_item);
-	}
-		else {
+		if (!listMode) {
 			AdapterView.AdapterContextMenuInfo info;
 			try {
 				info = (AdapterView.AdapterContextMenuInfo) menuInfo;
@@ -671,13 +635,53 @@ public class Trolly extends ListActivity {
 			}
 			Cursor cursor = (Cursor) getListAdapter().getItem(info.position);
 			if (cursor == null) {
-				// For some reason the requested item isn't available, do nothing
+				// For some reason the requested item isn't available, do
+				// nothing
 				return;
 			}
-			menu.setHeaderTitle(cursor.getString(cursor.getColumnIndex(ShoppingList.LISTNAME)));
+			// Setup the menu header
+			menu.setHeaderTitle(cursor.getString(cursor
+					.getColumnIndex(ShoppingList.ITEM)));
+			int status = cursor.getInt(cursor
+					.getColumnIndex(ShoppingList.STATUS));
+
+			// Add context menu items depending on current state
+			switch (status) {
+			case ShoppingList.OFF_LIST:
+				menu.add(0, MENU_ITEM_ON_LIST, 0, R.string.move_on_list);
+				menu.add(0, MENU_ITEM_IN_TROLLEY, 0, R.string.move_in_trolley);
+				break;
+			case ShoppingList.ON_LIST:
+				menu.add(0, MENU_ITEM_IN_TROLLEY, 0, R.string.move_in_trolley);
+				menu.add(0, MENU_ITEM_OFF_LIST, 0, R.string.move_off_list);
+				break;
+			case ShoppingList.IN_TROLLEY:
+				menu.add(0, MENU_ITEM_ON_LIST, 0, R.string.move_on_list);
+				menu.add(0, MENU_ITEM_OFF_LIST, 0, R.string.move_off_list);
+				break;
+			}
+
+			// Add context menu items that are relevant for all items
+			menu.add(0, MENU_ITEM_EDIT, 0, R.string.edit_item);
+			menu.add(0, MENU_ITEM_DELETE, 0, R.string.delete_item);
+		} else {
+			AdapterView.AdapterContextMenuInfo info;
+			try {
+				info = (AdapterView.AdapterContextMenuInfo) menuInfo;
+			} catch (ClassCastException e) {
+				return;
+			}
+			Cursor cursor = (Cursor) getListAdapter().getItem(info.position);
+			if (cursor == null) {
+				// For some reason the requested item isn't available, do
+				// nothing
+				return;
+			}
+			menu.setHeaderTitle(cursor.getString(cursor
+					.getColumnIndex(ShoppingList.LISTNAME)));
 			menu.add(0, MENU_ITEM_DELETE, 0, R.string.delete_item);
 		}
-		}
+	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -701,22 +705,12 @@ public class Trolly extends ListActivity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 
-		// TODO
+		// Add new button lists to change to lists interface
 
 		case MENU_LISTS:
 			listMode = true;
 			mTextBox.setHint("Add a list");
-//			mCursor = managedQuery(getIntent().getData(), LISTPROJECTION,
-//					" 0==0) GROUP BY ( " + ShoppingList.LISTNAME, null,
-//					ShoppingList.LISTNAME + " ASC");
-//
-//			// set the list adapter
-//			mAdapterForList = new TrollyAdapterForList(this,
-//					R.layout.shoppinglist_item, mCursor,
-//					new String[] { ShoppingList.LISTNAME },
-//					new int[] { R.id.item });
-//			setListAdapter(mAdapterForList);
-			updateListView ();
+			updateListView();
 			return true;
 
 		case MENU_SHOPPING:
@@ -779,74 +773,100 @@ public class Trolly extends ListActivity {
 			mDialogView = factory.inflate(R.layout.dialog_confirm, null);
 			mDialogText = (TextView) mDialogView
 					.findViewById(R.id.dialog_confirm_prompt);
-			if(!listMode){
-			return new AlertDialog.Builder(this)
-					.setTitle(R.string.delete_item)
-					.setView(mDialogView)
-					.setPositiveButton(R.string.dialog_ok,
-							new DialogInterface.OnClickListener() {
-								public void onClick(DialogInterface dialog,
-										int whichButton) {
-									/* User clicked OK so do some stuff */
-									getContentResolver().delete(mUri, null,
-											null);
-								}
-							})
-					.setNegativeButton(R.string.dialog_cancel,
-							new DialogInterface.OnClickListener() {
-								public void onClick(DialogInterface dialog,
-										int whichButton) {
-									/* User clicked cancel so do some stuff */
-								}
-							}).create();
-		}
-			// TODO list mode delete
+			if (!listMode) {
+				return new AlertDialog.Builder(this)
+						.setTitle(R.string.delete_item)
+						.setView(mDialogView)
+						.setPositiveButton(R.string.dialog_ok,
+								new DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog,
+											int whichButton) {
+										/* User clicked OK so do some stuff */
+										getContentResolver().delete(mUri, null,
+												null);
+									}
+								})
+						.setNegativeButton(R.string.dialog_cancel,
+								new DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog,
+											int whichButton) {
+										/* User clicked cancel so do some stuff */
+									}
+								}).create();
+			}
+			// Handle the list interface delete action
 			else {
 
 				return new AlertDialog.Builder(this)
-				.setTitle(R.string.delete_item)
-				.setView(mDialogView)
-				.setPositiveButton(R.string.dialog_ok,
-						new DialogInterface.OnClickListener() {
-							public void onClick(DialogInterface dialog,
-									int whichButton) {
-								/* User clicked OK so do some stuff */      // TODO delete them all 
-							//	getContentResolver().delete(getIntent().getData(), "listname='" + R.string.delete_item+"'",null);
-								
-								 Cursor c = managedQuery(getIntent().getData(), PROJECTION, adding ? null
-										: ShoppingList.STATUS + "<>" + ShoppingList.OFF_LIST
-												+ " AND listname='" + currentList+"'", null,ShoppingList.DEFAULT_SORT_ORDER);
-								c.moveToFirst();
-								ContentValues values = new ContentValues();
-								values.put(ShoppingList.STATUS, ShoppingList.OFF_LIST);
-								Uri uri;
-								long id;
-								// loop through all items in the list
-								while (!c.isAfterLast()) {
-										id = c.getLong(c.getColumnIndexOrThrow(ShoppingList._ID));
-										uri = ContentUris.withAppendedId(getIntent().getData(), id);
-										// Update the status of this item (in trolley) to "off list"
-										getContentResolver().update(uri, values, null, null);
-										// Cleanup the list by deleting double up items that have been
-										// checked out
-										getContentResolver().delete(getIntent().getData(),ShoppingList.ITEM	+ "='"+ c.getString(c.getColumnIndex(ShoppingList.ITEM))
-														+ "' AND " + ShoppingList._ID + "<>" + id
-														+ " AND listname='" + currentList+"'", null);
-									c.moveToNext();
-								}
-								//getContentResolver().delete(getIntent().getData(), "listname='" + R.string.delete_item+"'",null);		
-								getContentResolver().delete(getIntent().getData(), "listname='" + currentList+"'",null);	
-								mTextBox.setHint("Add an item");
-								updateListView();
-								}
-						})
-				.setNegativeButton(R.string.dialog_cancel,
-						new DialogInterface.OnClickListener() {
-							public void onClick(DialogInterface dialog,
-									int whichButton) {
-								/* User clicked cancel so do some stuff */
-							}
-						}).create();
+						.setTitle(R.string.delete_item)
+						.setView(mDialogView)
+						.setPositiveButton(R.string.dialog_ok,
+								new DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog,
+											int whichButton) {
+										/* User clicked OK so do some stuff */
+										// delete all item from the currentList
+										Cursor c = managedQuery(
+												getIntent().getData(),
+												PROJECTION,
+												adding ? null
+														: ShoppingList.STATUS
+																+ "<>"
+																+ ShoppingList.OFF_LIST
+																+ " AND listname='"
+																+ currentList
+																+ "'", null,
+												ShoppingList.DEFAULT_SORT_ORDER);
+										c.moveToFirst();
+										ContentValues values = new ContentValues();
+										values.put(ShoppingList.STATUS,
+												ShoppingList.OFF_LIST);
+										Uri uri;
+										long id;
+										// loop through all items in the list
+										while (!c.isAfterLast()) {
+											id = c.getLong(c
+													.getColumnIndexOrThrow(ShoppingList._ID));
+											uri = ContentUris.withAppendedId(
+													getIntent().getData(), id);
+											// Update the status of this item
+											// (in trolley) to "off list"
+											getContentResolver().update(uri,
+													values, null, null);
+											// Cleanup the list by deleting
+											// double up items that have been
+											// checked out
+											getContentResolver()
+													.delete(getIntent()
+															.getData(),
+															ShoppingList.ITEM
+																	+ "='"
+																	+ c.getString(c
+																			.getColumnIndex(ShoppingList.ITEM))
+																	+ "' AND "
+																	+ ShoppingList._ID
+																	+ "<>"
+																	+ id
+																	+ " AND listname='"
+																	+ currentList
+																	+ "'", null);
+											c.moveToNext();
+										}
+										getContentResolver().delete(
+												getIntent().getData(),
+												"listname='" + currentList
+														+ "'", null);
+										mTextBox.setHint("Add an item");
+										updateListView();
+									}
+								})
+						.setNegativeButton(R.string.dialog_cancel,
+								new DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog,
+											int whichButton) {
+										/* User clicked cancel so do some stuff */
+									}
+								}).create();
 			}
 		case DIALOG_CLEAR:
 			mDialogView = factory.inflate(R.layout.dialog_confirm, null);
@@ -990,8 +1010,11 @@ public class Trolly extends ListActivity {
 			}
 		}
 	}
-	
-	public void updateListView (){
+
+	/*
+	 * Funcion to update the list views in the list mode interface
+	 */
+	public void updateListView() {
 		this.mCursor = managedQuery(getIntent().getData(), LISTPROJECTION,
 				" 0==0) GROUP BY ( " + ShoppingList.LISTNAME, null,
 				ShoppingList.LISTNAME + " ASC");
@@ -999,8 +1022,7 @@ public class Trolly extends ListActivity {
 		// set the list adapter
 		this.mAdapterForList = new TrollyAdapterForList(this,
 				R.layout.shoppinglist_item, mCursor,
-				new String[] { ShoppingList.LISTNAME },
-				new int[] { R.id.item });
+				new String[] { ShoppingList.LISTNAME }, new int[] { R.id.item });
 		setListAdapter(mAdapterForList);
 	}
 }
