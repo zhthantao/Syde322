@@ -422,11 +422,12 @@ public class Trolly extends ListActivity {
 						ContentValues values = new ContentValues();
 						values.put(ShoppingList.ITEM,"");
 						values.put(ShoppingList.LISTNAME,	mTextBox.getText().toString());
-						getContentResolver().insert(currentURI, values);						
+						getContentResolver().insert(currentURI, values);	
+						updateListView();
 					}
 					 else {
 							adding = !adding;
-							updateList();
+							updateListView();
 						}
 					mTextBox.setText("");
 
@@ -610,7 +611,10 @@ public class Trolly extends ListActivity {
 			switch (item.getItemId()) {
 			case MENU_ITEM_DELETE:
 				showDialog(DIALOG_DELETE);
-				mDialogText.setText(c.getString(c.getColumnIndex(ShoppingList.LISTNAME)));break;
+				currentList = c.getString(c.getColumnIndex(ShoppingList.LISTNAME));
+				mDialogText.setText(c.getString(c.getColumnIndex(ShoppingList.LISTNAME)));
+				
+				break;
 			}			
 			return true;
 			}
@@ -702,45 +706,17 @@ public class Trolly extends ListActivity {
 		case MENU_LISTS:
 			listMode = true;
 			mTextBox.setHint("Add a list");
-
-			// if(flag){
-			// currentList = 1;
-			// mCursor = managedQuery(getIntent().getData(), PROJECTION, adding
-			// ? null:
-			// ShoppingList.STATUS+"<>"+ShoppingList.OFF_LIST+" AND listname="+currentList,null,ShoppingList.DEFAULT_SORT_ORDER);
-			// //set the list adapter
-			// mAdapter = new TrollyAdapter(this, R.layout.shoppinglist_item,
-			// mCursor, new String[] { ShoppingList.ITEM}, new int[] {
-			// R.id.item});
-			// setListAdapter(mAdapter);
-			// flag = false;
-			// }
-			// else{
-			// currentList =2;
-			// mCursor = managedQuery(getIntent().getData(), PROJECTION, adding
-			// ? null:
-			// ShoppingList.STATUS+"<>"+ShoppingList.OFF_LIST+" AND listname="+currentList,null,ShoppingList.DEFAULT_SORT_ORDER);
-			// //set the list adapter
-			// mAdapter = new TrollyAdapter(this, R.layout.shoppinglist_item,
-			// mCursor, new String[] { ShoppingList.ITEM}, new int[] {
-			// R.id.item});
-			// setListAdapter(mAdapter);
-			// flag = true;
-			// }
-
-			mCursor = managedQuery(getIntent().getData(), LISTPROJECTION,
-					" 0==0) GROUP BY ( " + ShoppingList.LISTNAME, null,
-					ShoppingList.LISTNAME + " ASC");
-			// mCursor =
-			// getContentResolver().query(getIntent().getData(),LISTPROJECTION,null,null,
-			// ShoppingList.DEFAULT_SORT_ORDER);
-
-			// set the list adapter
-			mAdapterForList = new TrollyAdapterForList(this,
-					R.layout.shoppinglist_item, mCursor,
-					new String[] { ShoppingList.LISTNAME },
-					new int[] { R.id.item });
-			setListAdapter(mAdapterForList);
+//			mCursor = managedQuery(getIntent().getData(), LISTPROJECTION,
+//					" 0==0) GROUP BY ( " + ShoppingList.LISTNAME, null,
+//					ShoppingList.LISTNAME + " ASC");
+//
+//			// set the list adapter
+//			mAdapterForList = new TrollyAdapterForList(this,
+//					R.layout.shoppinglist_item, mCursor,
+//					new String[] { ShoppingList.LISTNAME },
+//					new int[] { R.id.item });
+//			setListAdapter(mAdapterForList);
+			updateListView ();
 			return true;
 
 		case MENU_SHOPPING:
@@ -824,7 +800,7 @@ public class Trolly extends ListActivity {
 								}
 							}).create();
 		}
-			// TODO list mode delet
+			// TODO list mode delete
 			else {
 
 				return new AlertDialog.Builder(this)
@@ -836,7 +812,6 @@ public class Trolly extends ListActivity {
 									int whichButton) {
 								/* User clicked OK so do some stuff */      // TODO delete them all 
 							//	getContentResolver().delete(getIntent().getData(), "listname='" + R.string.delete_item+"'",null);
-							//	getContentResolver().query(currentURI, PROJECTION, "listname='" + R.string.delete_item+"'", null, null);
 								
 								 Cursor c = managedQuery(getIntent().getData(), PROJECTION, adding ? null
 										: ShoppingList.STATUS + "<>" + ShoppingList.OFF_LIST
@@ -859,8 +834,11 @@ public class Trolly extends ListActivity {
 														+ " AND listname='" + currentList+"'", null);
 									c.moveToNext();
 								}
-								updateList();
-							}
+								//getContentResolver().delete(getIntent().getData(), "listname='" + R.string.delete_item+"'",null);		
+								getContentResolver().delete(getIntent().getData(), "listname='" + currentList+"'",null);	
+								mTextBox.setHint("Add an item");
+								updateListView();
+								}
 						})
 				.setNegativeButton(R.string.dialog_cancel,
 						new DialogInterface.OnClickListener() {
@@ -1011,5 +989,18 @@ public class Trolly extends ListActivity {
 				}
 			}
 		}
+	}
+	
+	public void updateListView (){
+		this.mCursor = managedQuery(getIntent().getData(), LISTPROJECTION,
+				" 0==0) GROUP BY ( " + ShoppingList.LISTNAME, null,
+				ShoppingList.LISTNAME + " ASC");
+
+		// set the list adapter
+		this.mAdapterForList = new TrollyAdapterForList(this,
+				R.layout.shoppinglist_item, mCursor,
+				new String[] { ShoppingList.LISTNAME },
+				new int[] { R.id.item });
+		setListAdapter(mAdapterForList);
 	}
 }
