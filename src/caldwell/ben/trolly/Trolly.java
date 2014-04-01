@@ -836,7 +836,30 @@ public class Trolly extends ListActivity {
 									int whichButton) {
 								/* User clicked OK so do some stuff */      // TODO delete them all 
 							//	getContentResolver().delete(getIntent().getData(), "listname='" + R.string.delete_item+"'",null);
-								getContentResolver().query(currentURI, PROJECTION, "listname='" + R.string.delete_item+"'", null, null);
+							//	getContentResolver().query(currentURI, PROJECTION, "listname='" + R.string.delete_item+"'", null, null);
+								
+								 Cursor c = managedQuery(getIntent().getData(), PROJECTION, adding ? null
+										: ShoppingList.STATUS + "<>" + ShoppingList.OFF_LIST
+												+ " AND listname='" + currentList+"'", null,ShoppingList.DEFAULT_SORT_ORDER);
+								c.moveToFirst();
+								ContentValues values = new ContentValues();
+								values.put(ShoppingList.STATUS, ShoppingList.OFF_LIST);
+								Uri uri;
+								long id;
+								// loop through all items in the list
+								while (!c.isAfterLast()) {
+										id = c.getLong(c.getColumnIndexOrThrow(ShoppingList._ID));
+										uri = ContentUris.withAppendedId(getIntent().getData(), id);
+										// Update the status of this item (in trolley) to "off list"
+										getContentResolver().update(uri, values, null, null);
+										// Cleanup the list by deleting double up items that have been
+										// checked out
+										getContentResolver().delete(getIntent().getData(),ShoppingList.ITEM	+ "='"+ c.getString(c.getColumnIndex(ShoppingList.ITEM))
+														+ "' AND " + ShoppingList._ID + "<>" + id
+														+ " AND listname='" + currentList+"'", null);
+									c.moveToNext();
+								}
+								updateList();
 							}
 						})
 				.setNegativeButton(R.string.dialog_cancel,
